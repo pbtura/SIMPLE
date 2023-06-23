@@ -1,1 +1,1 @@
-from geschenkt.envs.geschenkt import GeschenktEnv
+from app.environments.geschenkt.geschenkt.envs.geschenkt import GeschenktEnv

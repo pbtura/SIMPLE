@@ -1,1 +1,1 @@
-from sushigo.envs.sushigo import SushiGoEnv
+from app.environments.sushigo.sushigo.envs.sushigo import SushiGoEnv

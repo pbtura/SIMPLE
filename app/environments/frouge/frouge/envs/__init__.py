@@ -1,1 +1,1 @@
-from frouge.envs.frouge import FlammeRougeEnv
+from app.environments.frouge.frouge.envs.frouge import FlammeRougeEnv

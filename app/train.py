@@ -13,22 +13,24 @@ import time
 from shutil import copyfile
 from mpi4py import MPI
 
-from stable_baselines.ppo1 import PPO1
-from stable_baselines.common.callbacks import EvalCallback
+from stable_baselines3.ppo import PPO
+from stable_baselines3.common.callbacks import EvalCallback
 
-from stable_baselines.common.vec_env import DummyVecEnv
-from stable_baselines.common import set_global_seeds
-from stable_baselines import logger
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common import logger
+from stable_baselines3.common.utils import set_random_seed
 
-from utils.callbacks import SelfPlayCallback
-from utils.files import reset_logs, reset_models
-from utils.register import get_network_arch, get_environment
-from utils.selfplay import selfplay_wrapper
+from app.utils.callbacks import SelfPlayCallback
+from app.utils.files import reset_logs, reset_models
+from app.utils.register import get_network_arch, get_environment
+from app.utils.selfplay import selfplay_wrapper
 
-import config
+import app.config as config
+import app.utils.files as files
+import torch as th
 
 def main(args):
-
+  train_logger: logger.Logger
   rank = MPI.COMM_WORLD.Get_rank()
 
   model_dir = os.path.join(config.MODELDIR, args.env_name)
@@ -41,20 +43,22 @@ def main(args):
     reset_logs(model_dir)
     if args.reset:
       reset_models(model_dir)
-    logger.configure(config.LOGDIR)
+    train_logger = logger.configure(config.LOGDIR)
   else:
-    logger.configure(format_strs=[])
+    train_logger = logger.configure(format_strings=[])
+
+  files.files_logger = train_logger
 
   if args.debug:
-    logger.set_level(config.DEBUG)
+    train_logger.set_level(config.DEBUG)
   else:
     time.sleep(5)
-    logger.set_level(config.INFO)
+    train_logger.set_level(config.INFO)
 
   workerseed = args.seed + 10000 * MPI.COMM_WORLD.Get_rank()
-  set_global_seeds(workerseed)
+  set_random_seed(workerseed)
 
-  logger.info('\nSetting up the selfplay training environment opponents...')
+  train_logger.info('\nSetting up the selfplay training environment opponents...')
   base_env = get_environment(args.env_name)
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
@@ -79,14 +83,14 @@ def main(args):
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
 
   if args.reset or not os.path.exists(os.path.join(model_dir, 'best_model.zip')):
-    logger.info('\nLoading the base PPO agent to train...')
-    model = PPO1.load(os.path.join(model_dir, 'base.zip'), env, **params)
+    train_logger.info('\nLoading the base PPO agent to train...')
+    model = PPO.load(os.path.join(model_dir, 'base.zip'), env, **params)
   else:
-    logger.info('\nLoading the best_model.zip PPO agent to continue training...')
-    model = PPO1.load(os.path.join(model_dir, 'best_model.zip'), env, **params)
+    train_logger.info('\nLoading the best_model.zip PPO agent to continue training...')
+    model = PPO.load(os.path.join(model_dir, 'best_model.zip'), env, **params)
 
   #Callbacks
-  logger.info('\nSetting up the selfplay evaluation environment opponents...')
+  train_logger.info('\nSetting up the selfplay evaluation environment opponents...')
   callback_args = {
     'eval_env': selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose),
     'best_model_save_path' : config.TMPMODELDIR,
@@ -99,7 +103,7 @@ def main(args):
   }
 
   if args.rules:  
-    logger.info('\nSetting up the evaluation environment against the rules-based agent...')
+    train_logger.info('\nSetting up the evaluation environment against the rules-based agent...')
     # Evaluate against a 'rules' agent as well
     eval_actual_callback = EvalCallback(
       eval_env = selfplay_wrapper(base_env)(opponent_type = 'rules', verbose = args.verbose),
@@ -114,7 +118,7 @@ def main(args):
   # Evaluate the agent against previous versions
   eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
 
-  logger.info('\nSetup complete - commencing learning...\n')
+  train_logger.info('\nSetup complete - commencing learning...\n')
 
   model.learn(total_timesteps=int(1e9), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
 

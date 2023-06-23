@@ -6,7 +6,7 @@ import string
 
 import config
 
-from stable_baselines import logger
+from stable_baselines3.common import logger
 
 def sample_action(action_probs):
     action = np.random.choice(len(action_probs), p = action_probs)

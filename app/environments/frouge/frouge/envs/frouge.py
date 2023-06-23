@@ -7,8 +7,7 @@ from functools import cmp_to_key
 
 import config
 
-from stable_baselines import logger
-from stable_baselines.common import set_global_seeds
+from stable_baselines3.common import logger
 
 from .classes import *
 

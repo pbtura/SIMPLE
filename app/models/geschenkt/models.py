@@ -3,10 +3,10 @@ import tensorflow as tf
 tf.get_logger().setLevel('INFO')
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-from tensorflow.keras.layers import BatchNormalization, Activation, Flatten, Add, Dense, Multiply, Concatenate, Lambda
-import tensorflow.keras.backend as K
-from stable_baselines.common.policies import ActorCriticPolicy
-from stable_baselines.common.distributions import CategoricalProbabilityDistribution
+from keras.layers import BatchNormalization, Activation, Flatten, Add, Dense, Multiply, Concatenate, Lambda
+import keras.backend as K
+from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.distributions import CategoricalDistribution
 
 
 ACTIONS = 36
@@ -16,7 +16,14 @@ VALUE_DEPTH = 1
 POLICY_DEPTH = 1
 
 class CustomPolicy(ActorCriticPolicy):
-    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **kwargs):
+    def __init__(self, observation_space: gym.spaces.Space,
+        action_space: gym.spaces.Space,
+        features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
+        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
+        features_extractor: Optional[nn.Module] = None,
+        normalize_images: bool = True,
+        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
+        optimizer_kwargs: Optional[Dict[str, Any]] = None,):
         super(CustomPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse, scale=True)
 
         with tf.variable_scope("model", reuse=reuse):
@@ -27,7 +34,7 @@ class CustomPolicy(ActorCriticPolicy):
 
             self._policy = policy_head(extracted_features, legal_actions)
             self._value_fn, self.q_value = value_head(extracted_features)
-            self._proba_distribution  = CategoricalProbabilityDistribution(self._policy)
+            self._proba_distribution  = CategoricalDistribution(self._policy)
 
         self._setup_init()
 

@@ -2,12 +2,12 @@ import os
 import numpy as np
 import random
 
-from utils.files import load_model, load_all_models, get_best_model_name
-from utils.agents import Agent
+from app.utils.files import load_model, load_all_models, get_best_model_name
+from app.utils.agents import Agent
 
 import config
 
-from stable_baselines import logger
+from stable_baselines3.common import logger
 
 def selfplay_wrapper(env):
     class SelfPlayEnv(env):

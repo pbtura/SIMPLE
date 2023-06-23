@@ -1,5 +1,7 @@
-tensorflow==1.15.0
-stable-baselines[mpi]==2.10.1
+tensorflow==2.10.0
+stable-baselines3==1.5.0
 jupyter==1.0.0
-jupyterlab==3.0.0
+jupyterlab==4.0.2
 pillow
+mpi4py==3.1.4
+utils==1.0.1

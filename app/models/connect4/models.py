@@ -1,25 +1,49 @@
+from typing import Optional, List, Union, Dict, Type, Any
+
+import gym
 import numpy as np
 import tensorflow as tf
+import torch as th
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor, FlattenExtractor
+from stable_baselines3.common.type_aliases import Schedule
+from torch import nn
+
 tf.get_logger().setLevel('INFO')
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
-from tensorflow.keras.layers import BatchNormalization, Activation, Flatten, Conv2D, Add, Dense, Dropout
+from keras.layers import BatchNormalization, Activation, Flatten, Conv2D, Add, Dense, Dropout
 
-from stable_baselines.common.policies import ActorCriticPolicy
-from stable_baselines.common.distributions import CategoricalProbabilityDistributionType, CategoricalProbabilityDistribution
+from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.distributions import CategoricalDistribution
 
 
 class CustomPolicy(ActorCriticPolicy):
-    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **kwargs):
-        super(CustomPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse, scale=True)
+    def __init__(self, observation_space: gym.spaces.Space,
+        action_space: gym.spaces.Space,
+        lr_schedule: Schedule,
+        net_arch: Optional[List[Union[int, Dict[str, List[int]]]]] = None,
+        activation_fn: Type[nn.Module] = nn.Tanh,
+        ortho_init: bool = True,
+        use_sde: bool = False,
+        log_std_init: float = 0.0,
+        full_std: bool = True,
+        sde_net_arch: Optional[List[int]] = None,
+        use_expln: bool = False,
+        squash_output: bool = False,
+        features_extractor_class: Type[BaseFeaturesExtractor] = FlattenExtractor,
+        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
+        normalize_images: bool = True,
+        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
+        optimizer_kwargs: Optional[Dict[str, Any]] = None,):
+        super(CustomPolicy, self).__init__(observation_space, action_space, lr_schedule, net_arch, activation_fn, ortho_init, use_sde, log_std_init, full_std, sde_net_arch, use_expln, squash_output, features_extractor_class, features_extractor_kwargs, normalize_images, optimizer_class, optimizer_kwargs)
 
-        with tf.variable_scope("model", reuse=reuse):
+        with tf.variable_scope("model"):
             
-            extracted_features = resnet_extractor(self.processed_obs, **kwargs)
+            extracted_features = resnet_extractor(self.processed_obs)
             self._policy = policy_head(extracted_features)
             self._value_fn, self.q_value = value_head(extracted_features)
 
-            self._proba_distribution  = CategoricalProbabilityDistribution(self._policy)
+            self._proba_distribution  = CategoricalDistribution(self._policy)
 
             
         self._setup_init()

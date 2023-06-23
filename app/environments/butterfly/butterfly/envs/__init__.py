@@ -1,1 +1,1 @@
-from butterfly.envs.butterfly import ButterflyEnv
+from app.environments.butterfly.butterfly.envs.butterfly import ButterflyEnv
