@@ -2,15 +2,15 @@
 import gym
 import numpy as np
 
-import config
+import app.config as Config
 
-from stable_baselines3.common import logger
+from stable_baselines3.common import logger as lg
 
 from .classes import *
 
+
 class SushiGoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
-
     def __init__(self, verbose = False, manual = False):
         super(SushiGoEnv, self).__init__()
         self.name = 'sushigo'
@@ -139,38 +139,38 @@ class SushiGoEnv(gym.Env):
 
 
     def score_puddings(self):
-        logger.debug('\nPudding counts...')
+        Config.logger.debug('\nPudding counts...')
 
         puddings = []
         for p in self.players:
             puddings.append(len([card for card in p.position.cards if card.type == 'pudding']))
         
-        logger.debug(f'Puddings: {puddings}')
+        Config.logger.debug(f'Puddings: {puddings}')
 
         pudding_winners = self.get_limits(puddings, 'max')
 
         for i in pudding_winners:
             self.players[i].score += 6 // len(pudding_winners)
-            logger.debug(f'Player {self.players[i].id} 1st place puddings: {6 // len(pudding_winners)}')
+            Config.logger.debug(f'Player {self.players[i].id} 1st place puddings: {6 // len(pudding_winners)}')
         
         pudding_losers = self.get_limits(puddings, 'min')
 
         for i in pudding_losers:
             self.players[i].score -= 6 // len(pudding_losers)
-            logger.debug(f'Player {self.players[i].id} last place puddings: {-6 // len(pudding_losers)}')
+            Config.logger.debug(f'Player {self.players[i].id} last place puddings: {-6 // len(pudding_losers)}')
 
 
 
     def score_maki(self, maki):
-        logger.debug('\nMaki counts...')
-        logger.debug(f'Maki: {maki}')
+        Config.logger.debug('\nMaki counts...')
+        Config.logger.debug(f'Maki: {maki}')
 
         maki_winners = self.get_limits(maki, 'max')
 
         for i in maki_winners:
             self.players[i].score += 6 // len(maki_winners)
             maki[i] = None #mask out the winners
-            logger.debug(f'Player {self.players[i].id} 1st place maki: {6 // len(maki_winners)}')
+            Config.logger.debug(f'Player {self.players[i].id} 1st place maki: {6 // len(maki_winners)}')
         
         if len(maki_winners) == 1:
             #now get second place as winners are masked with None
@@ -178,7 +178,7 @@ class SushiGoEnv(gym.Env):
 
             for i in maki_winners:
                 self.players[i].score += 3 // len(maki_winners)
-                logger.debug(f'Player {self.players[i].id} 2nd place maki: {3 // len(maki_winners)}')
+                Config.logger.debug(f'Player {self.players[i].id} 2nd place maki: {3 // len(maki_winners)}')
 
 
     def score_round(self):
@@ -220,7 +220,7 @@ class SushiGoEnv(gym.Env):
 
 
     def pickup_chopsticks(self, player):
-        logger.debug(f'Player {player.id} picking up chopsticks')
+        Config.logger.debug(f'Player {player.id} picking up chopsticks')
         chopsticks = player.position.pick('chopsticks')
         player.hand.add([chopsticks])
 
@@ -229,10 +229,10 @@ class SushiGoEnv(gym.Env):
         card_name = self.contents[card_num]['info']['name']
         card = player.hand.pick(card_name)
         if card is None:
-            logger.debug(f"Player {player.id} trying to play {card_num} but doesn't exist!")
+            Config.logger.debug(f"Player {player.id} trying to play {card_num} but doesn't exist!")
             raise Exception('Card not found')
 
-        logger.debug(f"Player {player.id} playing {str(card.order) + ': ' + card.symbol + ': ' + str(card.id)}")
+        Config.logger.debug(f"Player {player.id} playing {str(card.order) + ': ' + card.symbol + ': ' + str(card.id)}")
         if card.type == 'nigiri':
             for c in player.position.cards:
                 if c.type == 'wasabi' and c.played_upon == False:
@@ -244,7 +244,7 @@ class SushiGoEnv(gym.Env):
 
 
     def switch_hands(self):
-        logger.debug(f'\nSwitching hands...')
+        Config.logger.debug(f'\nSwitching hands...')
         playernhand = self.players[-1].hand
 
         for i in range(self.n_players - 1, -1, -1):
@@ -271,7 +271,7 @@ class SushiGoEnv(gym.Env):
             self.action_bank.append(action)
 
             if len(self.action_bank) == self.n_players:
-                logger.debug(f'\nThe chosen cards are now played simultaneously')
+                Config.logger.debug(f'\nThe chosen cards are now played simultaneously')
                 for i, action in enumerate(self.action_bank):
                     player = self.players[i]
 
@@ -333,7 +333,7 @@ class SushiGoEnv(gym.Env):
         self.current_player_num = 0
         self.done = False
         self.reset_round()
-        logger.debug(f'\n\n---- NEW GAME ----')
+        Config.logger.debug(f'\n\n---- NEW GAME ----')
         return self.observation
 
 
@@ -343,41 +343,41 @@ class SushiGoEnv(gym.Env):
             return
 
         if self.turns_taken < self.cards_per_player:
-            logger.debug(f'\n\n-------ROUND {self.round} : TURN {self.turns_taken + 1}-----------')
-            logger.debug(f"It is Player {self.current_player.id}'s turn to choose")
+            Config.logger.debug(f'\n\n-------ROUND {self.round} : TURN {self.turns_taken + 1}-----------')
+            Config.logger.debug(f"It is Player {self.current_player.id}'s turn to choose")
         else:
-            logger.debug(f'\n\n-------FINAL ROUND {self.round} POSITION-----------')
+            Config.logger.debug(f'\n\n-------FINAL ROUND {self.round} POSITION-----------')
             
 
         for p in self.players:
-            logger.debug(f'\nPlayer {p.id}\'s hand')
+            Config.logger.debug(f'\nPlayer {p.id}\'s hand')
             if p.hand.size() > 0:
-                logger.debug('  '.join([ str(card.order) + ': ' + card.symbol for card in sorted(p.hand.cards, key=lambda x: x.id)]))
+                Config.logger.debug('  '.join([ str(card.order) + ': ' + card.symbol for card in sorted(p.hand.cards, key=lambda x: x.id)]))
             else:
-                logger.debug('Empty')
+                Config.logger.debug('Empty')
 
-            logger.debug(f'Player {p.id}\'s position')
+            Config.logger.debug(f'Player {p.id}\'s position')
             if p.position.size() > 0:
-                logger.debug('  '.join([str(card.order) + ': ' + card.symbol + ': ' + str(card.id) for card in sorted(p.position.cards, key=lambda x: x.id)]))
+                Config.logger.debug('  '.join([str(card.order) + ': ' + card.symbol + ': ' + str(card.id) for card in sorted(p.position.cards, key=lambda x: x.id)]))
             else:
-                logger.debug('Empty')
+                Config.logger.debug('Empty')
 
-        logger.debug(f'\n{self.deck.size()} cards left in deck')
-        logger.debug(f'{self.discard.size()} cards discarded')
+        Config.logger.debug(f'\n{self.deck.size()} cards left in deck')
+        Config.logger.debug(f'{self.discard.size()} cards discarded')
 
         if self.verbose:
-            logger.debug(f'\nObservation: \n{[i if o == 1 else (i,o) for i,o in enumerate(self.observation) if o != 0]}')
+            Config.logger.debug(f'\nObservation: \n{[i if o == 1 else (i,o) for i,o in enumerate(self.observation) if o != 0]}')
         
         if not self.done:
-            logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
+            Config.logger.debug(f'\nLegal actions: {[i for i,o in enumerate(self.legal_actions) if o != 0]}')
 
         if self.done:
-            logger.debug(f'\n\nGAME OVER')
+            Config.logger.debug(f'\n\nGAME OVER')
             
 
         if self.turns_taken == self.cards_per_player:
             for p in self.players:
-                logger.debug(f'Player {p.id} points: {p.score}')
+                Config.logger.debug(f'Player {p.id} points: {p.score}')
 
 
     def rules_move(self):

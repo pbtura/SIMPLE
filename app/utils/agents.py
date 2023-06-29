@@ -1,12 +1,19 @@
 import sys
+
+import gym
 import numpy as np
+import torch
+from stable_baselines3.common.distributions import Distribution
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+from stable_baselines3.common.utils import obs_as_tensor
+
 np.set_printoptions(threshold=sys.maxsize)
 import random
 import string
 
-import config
+import app.config as Config
 
-from stable_baselines3.common import logger
+from stable_baselines3.common import logger as lg
 
 def sample_action(action_probs):
     action = np.random.choice(len(action_probs), p = action_probs)
@@ -23,39 +30,47 @@ def mask_actions(legal_actions, action_probs):
 
 
 class Agent():
-  def __init__(self, name, model = None):
+  model: OnPolicyAlgorithm
+
+  def __init__(self, name, model: OnPolicyAlgorithm = None):
       self.name = name
       self.id = self.name + '_' + ''.join(random.choice(string.ascii_lowercase) for x in range(5))
       self.model = model
       self.points = 0
 
   def print_top_actions(self, action_probs):
-    top5_action_idx = np.argsort(-action_probs)[:5]
-    top5_actions = action_probs[top5_action_idx]
-    logger.debug(f"Top 5 actions: {[str(i) + ': ' + str(round(a,2))[:5] for i,a in zip(top5_action_idx, top5_actions)]}")
+    top5_action: tuple = torch.topk(action_probs, 5, sorted=True)
+    top5_action_idx = top5_action[1]
+    top5_action_values = top5_action[0]
+    for i, a in zip(top5_action_idx, top5_action_values):
+        Config.logger.debug(f"Top 5 actions: {i.item()} ': ' {a.item():.2f}")
 
-  def choose_action(self, env, choose_best_action, mask_invalid_actions):
+  def choose_action(self, env: gym.Env, choose_best_action, mask_invalid_actions):
       if self.name == 'rules':
         action_probs = np.array(env.rules_move())
         value = None
       else:
-        action_probs = self.model.action_probability(env.observation)
-        value = self.model.policy_pi.value(np.array([env.observation]))[0]
-        logger.debug(f'Value {value:.2f}')
+        # get a tensor of the observation space
+        obs = self.model.policy.obs_to_tensor(env.observation)[0]
+        dist: Distribution = self.model.policy.get_distribution(obs)
+        probs = dist.distribution.probs
+        # value = self.model.policy.value(np.array([env.observation]))[0]
+        # Config.logger.debug(f'Value {value:.2f}')
+        action_probs = probs.flatten()
 
       self.print_top_actions(action_probs)
       
       if mask_invalid_actions:
         action_probs = mask_actions(env.legal_actions, action_probs)
-        logger.debug('Masked ->')
+        Config.logger.debug('Masked ->')
         self.print_top_actions(action_probs)
         
-      action = np.argmax(action_probs)
-      logger.debug(f'Best action {action}')
+      action = torch.max(action_probs).item()
+      Config.logger.debug(f'Best action {action}')
 
       if not choose_best_action:
-          action = sample_action(action_probs)
-          logger.debug(f'Sampled action {action} chosen')
+          action = env.action_space.sample()
+          Config.logger.debug(f'Sampled action {action} chosen')
 
       return action
 

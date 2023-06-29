@@ -8,7 +8,7 @@ from stable_baselines3.common import logger
 
 from app.utils.files import get_best_model_name, get_model_stats
 
-import config
+import app.config as config
 
 class SelfPlayCallback(EvalCallback):
   def __init__(self, opponent_type, threshold, env_name, *args, **kwargs):
@@ -46,14 +46,14 @@ class SelfPlayCallback(EvalCallback):
 
       rank = MPI.COMM_WORLD.Get_rank()
       if rank == 0:
-        logger.info("Eval num_timesteps={}, episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, av_reward, std_reward))
-        logger.info("Total episodes ran={}".format(total_episodes))
+        config.logger.info("Eval num_timesteps={}, episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, av_reward, std_reward))
+        config.logger.info("Total episodes ran={}".format(total_episodes))
 
       #compare the latest reward against the threshold
       if result and av_reward > self.threshold:
         self.generation += 1
         if rank == 0: #write new files
-          logger.info(f"New best model: {self.generation}\n")
+          config.logger.info(f"New best model: {self.generation}\n")
 
           generation_str = str(self.generation).zfill(5)
           av_rewards_str = str(round(av_reward,3))

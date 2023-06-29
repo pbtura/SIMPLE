@@ -1,3 +1,4 @@
+from stable_baselines3.common import logger
 
 DEBUG = 10
 INFO = 20
@@ -9,3 +10,4 @@ LOGDIR = "logs"
 RESULTSPATH = 'viz/results.csv'
 TMPMODELDIR = "zoo/tmp"
 MODELDIR = "zoo"
+logger: logger.Logger

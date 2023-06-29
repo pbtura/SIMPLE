@@ -6,6 +6,7 @@ import random
 import csv
 import time
 import numpy as np
+import app.config as Config
 
 from mpi4py import MPI
 
@@ -14,11 +15,8 @@ from stable_baselines3.ppo import PPO
 
 from app.utils.register import get_network_arch
 
-import app.config as config
 
 from stable_baselines3.common import logger
-
-files_logger: logger.Logger
 
 def write_results(players, game, games, episode_length):
     
@@ -31,21 +29,21 @@ def write_results(players, game, games, episode_length):
     , 'p2_points': np.sum([x.points for x in players[1:]])
     }
 
-    if not os.path.exists(config.RESULTSPATH):
-        with open(config.RESULTSPATH,'a') as csvfile:
+    if not os.path.exists(Config.RESULTSPATH):
+        with open(Config.RESULTSPATH,'a') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=out.keys())
             writer.writeheader()
 
-    with open(config.RESULTSPATH,'a') as csvfile:
+    with open(Config.RESULTSPATH,'a') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=out.keys())
         writer.writerow(out)
 
 
-def load_model(env, name):
+def load_model(env, name) -> PPO:
 
-    filename = os.path.join(config.MODELDIR, env.name, name)
+    filename = os.path.join(Config.MODELDIR, env.name, name)
     if os.path.exists(filename):
-        files_logger.info(f'Loading {name}')
+        Config.logger.info(f'Loading {name}')
         cont = True
         while cont:
             try:
@@ -63,17 +61,17 @@ def load_model(env, name):
                 rank = MPI.COMM_WORLD.Get_rank()
                 if rank == 0:
                     ppo_model = PPO(get_network_arch(env.name), env=env, device="cuda")
-                    files_logger.info(f'Saving base.zip PPO model...')
-                    ppo_model.save(os.path.join(config.MODELDIR, env.name, 'base.zip'))
+                    Config.logger.info(f'Saving base.zip PPO model...')
+                    ppo_model.save(os.path.join(Config.MODELDIR, env.name, 'base.zip'))
                 else:
 
-                    ppo_model = PPO.load(os.path.join(config.MODELDIR, env.name, 'base.zip'), env=env)
+                    ppo_model = PPO.load(os.path.join(Config.MODELDIR, env.name, 'base.zip'), env=env)
 
                 cont = False
             except IOError as e:
                 sys.exit(f'Check zoo/{env.name}/ exists and read/write permission granted to user')
             except Exception as e:
-                files_logger.error(e)
+                Config.logger.error(e)
                 time.sleep(2)
                 
     else:
@@ -83,7 +81,7 @@ def load_model(env, name):
 
 
 def load_all_models(env):
-    modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env.name)) if f.startswith("_model")]
+    modellist = [f for f in os.listdir(os.path.join(Config.MODELDIR, env.name)) if f.startswith("_model")]
     modellist.sort()
     models = [load_model(env, 'base.zip')]
     for model_name in modellist:
@@ -92,7 +90,7 @@ def load_all_models(env):
 
 
 def get_best_model_name(env_name):
-    modellist = [f for f in os.listdir(os.path.join(config.MODELDIR, env_name)) if f.startswith("_model")]
+    modellist = [f for f in os.listdir(os.path.join(Config.MODELDIR, env_name)) if f.startswith("_model")]
     
     if len(modellist)==0:
         filename = None
@@ -119,16 +117,16 @@ def get_model_stats(filename):
 
 def reset_logs(model_dir):
     try:
-        filelist = [ f for f in os.listdir(config.LOGDIR) if f not in ['.gitignore']]
+        filelist = [ f for f in os.listdir(Config.LOGDIR) if f not in ['.gitignore']]
         for f in filelist:
             if os.path.isfile(f):  
-                os.remove(os.path.join(config.LOGDIR, f))
+                os.remove(os.path.join(Config.LOGDIR, f))
 
         for i in range(100):
-            if os.path.exists(os.path.join(config.LOGDIR, f'tb_{i}')):
-                rmtree(os.path.join(config.LOGDIR, f'tb_{i}'))
+            if os.path.exists(os.path.join(Config.LOGDIR, f'tb_{i}')):
+                rmtree(os.path.join(Config.LOGDIR, f'tb_{i}'))
         
-        open(os.path.join(config.LOGDIR, 'log.txt'), 'a').close()
+        open(os.path.join(Config.LOGDIR, 'log.txt'), 'a').close()
     
         
     except Exception as e :

@@ -37,7 +37,7 @@ class CustomPolicy(ActorCriticPolicy):
         optimizer_kwargs: Optional[Dict[str, Any]] = None,):
         super(CustomPolicy, self).__init__(observation_space, action_space, lr_schedule, net_arch, activation_fn, ortho_init, use_sde, log_std_init, full_std, sde_net_arch, use_expln, squash_output, features_extractor_class, features_extractor_kwargs, normalize_images, optimizer_class, optimizer_kwargs)
 
-        with tf.variable_scope("model"):
+        with tf.compat.v1.variable_scope("model"):
             
             extracted_features = resnet_extractor(self.processed_obs)
             self._policy = policy_head(extracted_features)

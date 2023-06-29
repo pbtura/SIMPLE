@@ -17,19 +17,18 @@ from app.utils.files import load_model, write_results
 from app.utils.register import get_environment
 from app.utils.agents import Agent
 
-import app.config as config
+import app.config as Config
 import app.utils.files as files
 
 
 def main(args):
-  test_logger: logger.Logger = logger.configure(config.LOGDIR)
+  Config.logger = logger.configure(Config.LOGDIR)
 
   if args.debug:
-    test_logger.set_level(config.DEBUG)
+    Config.logger.set_level(Config.DEBUG)
   else:
-    test_logger.set_level(config.INFO)
+    Config.logger.set_level(Config.INFO)
 
-  files.files_logger = test_logger
   #make environment
   env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual)
   env.seed(args.seed)
@@ -65,7 +64,7 @@ def main(args):
     total_rewards[agent_obj.id] = 0
   
   #play games
-  test_logger.info(f'\nPlaying {args.games} games...')
+  Config.logger.info(f'\nPlaying {args.games} games...')
   for game in range(args.games):
     players = agents[:]
 
@@ -76,17 +75,17 @@ def main(args):
     done = False
     
     for i, p in enumerate(players):
-      test_logger.debug(f'Player {i+1} = {p.name}')
+      Config.logger.debug(f'Player {i+1} = {p.name}')
 
     while not done:
 
       current_player = players[env.current_player_num]
       env.render()
-      test_logger.debug(f'\nCurrent player name: {current_player.name}')
+      Config.logger.debug(f'\nCurrent player name: {current_player.name}')
 
       if args.recommend and current_player.name in ['human', 'rules']:
         # show recommendation from last loaded model
-        test_logger.debug(f'\nRecommendation by {ppo_agent.name}:')
+        Config.logger.debug(f'\nRecommendation by {ppo_agent.name}:')
         action = ppo_agent.choose_action(env, choose_best_action = True, mask_invalid_actions = True)
 
       if current_player.name == 'human':
@@ -98,10 +97,10 @@ def main(args):
           # for MulitDiscrete action input as list TODO
           action = eval(action)
       elif current_player.name == 'rules':
-        test_logger.debug(f'\n{current_player.name} model choices')
+        Config.logger.debug(f'\n{current_player.name} model choices')
         action = current_player.choose_action(env, choose_best_action = False, mask_invalid_actions = True)
       else:
-        test_logger.debug(f'\n{current_player.name} model choices')
+        Config.logger.debug(f'\n{current_player.name} model choices')
         action = current_player.choose_action(env, choose_best_action = args.best, mask_invalid_actions = True)
 
       obs, reward, done, _ = env.step(action)
@@ -115,7 +114,7 @@ def main(args):
     
     env.render()
 
-    test_logger.info(f"Played {game + 1} games: {total_rewards}")
+    Config.logger.info(f"Played {game + 1} games: {total_rewards}")
 
     if args.write_results:
       write_results(players, game, args.games, env.turns_taken)

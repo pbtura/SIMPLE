@@ -38,8 +38,10 @@ def get_network_arch(env_name):
         from app.models.connect4.models import CustomPolicy
         return CustomPolicy
     elif env_name in ('sushigo'):
-        from app.models.sushigo.models import CustomPolicy
-        return CustomPolicy
+        # from app.models.sushigo.models import CustomPolicy
+        # return CustomPolicy
+        from stable_baselines3.common.policies import ActorCriticPolicy
+        return ActorCriticPolicy
     elif env_name in ('butterfly'):
         from app.models.butterfly.models import CustomPolicy
         return CustomPolicy

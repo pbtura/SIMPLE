@@ -25,15 +25,15 @@ from app.utils.files import reset_logs, reset_models
 from app.utils.register import get_network_arch, get_environment
 from app.utils.selfplay import selfplay_wrapper
 
-import app.config as config
+import app.config as Config
 import app.utils.files as files
 import torch as th
 
 def main(args):
-  train_logger: logger.Logger
+
   rank = MPI.COMM_WORLD.Get_rank()
 
-  model_dir = os.path.join(config.MODELDIR, args.env_name)
+  model_dir = os.path.join(Config.MODELDIR, args.env_name)
 
   if rank == 0:
     try:
@@ -43,22 +43,20 @@ def main(args):
     reset_logs(model_dir)
     if args.reset:
       reset_models(model_dir)
-    train_logger = logger.configure(config.LOGDIR)
+    Config.logger = logger.configure(Config.LOGDIR)
   else:
-    train_logger = logger.configure(format_strings=[])
-
-  files.files_logger = train_logger
+    Config.logger = logger.configure(format_strings=[])
 
   if args.debug:
-    train_logger.set_level(config.DEBUG)
+    Config.logger.set_level(Config.DEBUG)
   else:
     time.sleep(5)
-    train_logger.set_level(config.INFO)
+    Config.logger.set_level(Config.INFO)
 
   workerseed = args.seed + 10000 * MPI.COMM_WORLD.Get_rank()
   set_random_seed(workerseed)
 
-  train_logger.info('\nSetting up the selfplay training environment opponents...')
+  Config.logger.info('\nSetting up the selfplay training environment opponents...')
   base_env = get_environment(args.env_name)
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
@@ -77,24 +75,24 @@ def main(args):
       , 'adam_epsilon':args.adam_epsilon
       , 'schedule':'linear'
       , 'verbose':1
-      , 'tensorboard_log':config.LOGDIR
+      , 'tensorboard_log':Config.LOGDIR
   }
 
   time.sleep(5) # allow time for the base model to be saved out when the environment is created
 
   if args.reset or not os.path.exists(os.path.join(model_dir, 'best_model.zip')):
-    train_logger.info('\nLoading the base PPO agent to train...')
+    Config.logger.info('\nLoading the base PPO agent to train...')
     model = PPO.load(os.path.join(model_dir, 'base.zip'), env, **params)
   else:
-    train_logger.info('\nLoading the best_model.zip PPO agent to continue training...')
+    Config.logger.info('\nLoading the best_model.zip PPO agent to continue training...')
     model = PPO.load(os.path.join(model_dir, 'best_model.zip'), env, **params)
 
   #Callbacks
-  train_logger.info('\nSetting up the selfplay evaluation environment opponents...')
+  Config.logger.info('\nSetting up the selfplay evaluation environment opponents...')
   callback_args = {
     'eval_env': selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose),
-    'best_model_save_path' : config.TMPMODELDIR,
-    'log_path' : config.LOGDIR,
+    'best_model_save_path' : Config.TMPMODELDIR,
+    'log_path' : Config.LOGDIR,
     'eval_freq' : args.eval_freq,
     'n_eval_episodes' : args.n_eval_episodes,
     'deterministic' : False,
@@ -103,7 +101,7 @@ def main(args):
   }
 
   if args.rules:  
-    train_logger.info('\nSetting up the evaluation environment against the rules-based agent...')
+    Config.logger.info('\nSetting up the evaluation environment against the rules-based agent...')
     # Evaluate against a 'rules' agent as well
     eval_actual_callback = EvalCallback(
       eval_env = selfplay_wrapper(base_env)(opponent_type = 'rules', verbose = args.verbose),
@@ -118,7 +116,7 @@ def main(args):
   # Evaluate the agent against previous versions
   eval_callback = SelfPlayCallback(args.opponent_type, args.threshold, args.env_name, **callback_args)
 
-  train_logger.info('\nSetup complete - commencing learning...\n')
+  Config.logger.info('\nSetup complete - commencing learning...\n')
 
   model.learn(total_timesteps=int(1e9), callback=[eval_callback], reset_num_timesteps = False, tb_log_name="tb")
 
