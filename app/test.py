@@ -30,7 +30,7 @@ def main(args):
     Config.logger.set_level(Config.INFO)
 
   #make environment
-  env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual)
+  env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual, device = 'cuda')
   env.seed(args.seed)
   set_random_seed(args.seed)
 

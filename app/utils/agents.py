@@ -21,8 +21,8 @@ def sample_action(action_probs):
 
 
 def mask_actions(legal_actions, action_probs):
-    masked_action_probs = np.multiply(legal_actions, action_probs)
-    masked_action_probs = masked_action_probs / np.sum(masked_action_probs)
+    masked_action_probs = torch.multiply(legal_actions, action_probs)
+    masked_action_probs = masked_action_probs / torch.sum(masked_action_probs)
     return masked_action_probs
 
 
@@ -47,25 +47,24 @@ class Agent():
 
   def choose_action(self, env: gym.Env, choose_best_action, mask_invalid_actions):
       if self.name == 'rules':
-        action_probs = np.array(env.rules_move())
+        probs = torch.from_numpy(env.rules_move()).to(env.device)
         value = None
       else:
         # get a tensor of the observation space
         obs = self.model.policy.obs_to_tensor(env.observation)[0]
         dist: Distribution = self.model.policy.get_distribution(obs)
-        probs = dist.distribution.probs
+        probs = dist.distribution.probs.flatten()
         # value = self.model.policy.value(np.array([env.observation]))[0]
         # Config.logger.debug(f'Value {value:.2f}')
-        action_probs = probs.flatten()
 
-      self.print_top_actions(action_probs)
+      self.print_top_actions(probs)
       
       if mask_invalid_actions:
-        action_probs = mask_actions(env.legal_actions, action_probs)
+        probs = mask_actions( torch.from_numpy(env.legal_actions).to(env.device), probs)
         Config.logger.debug('Masked ->')
-        self.print_top_actions(action_probs)
+        self.print_top_actions(probs)
         
-      action = torch.max(action_probs).item()
+      action = torch.max(probs).item()
       Config.logger.debug(f'Best action {action}')
 
       if not choose_best_action:

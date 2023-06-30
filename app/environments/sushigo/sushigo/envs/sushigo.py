@@ -1,6 +1,8 @@
 
 import gym
 import numpy as np
+import torch
+from torch import Tensor
 
 import app.config as Config
 
@@ -11,10 +13,11 @@ from .classes import *
 
 class SushiGoEnv(gym.Env):
     metadata = {'render.modes': ['human']}
-    def __init__(self, verbose = False, manual = False):
+    def __init__(self, verbose = False, manual = False, device = 'cpu'):
         super(SushiGoEnv, self).__init__()
         self.name = 'sushigo'
         self.manual = manual
+        self.device = device
         
         self.n_players = 3
         self.cards_per_player = 9

@@ -57,7 +57,7 @@ def main(args):
   set_random_seed(workerseed)
 
   Config.logger.info('\nSetting up the selfplay training environment opponents...')
-  base_env = get_environment(args.env_name)
+  base_env = get_environment(args.env_name)(device = 'cuda')
   env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
   env.seed(workerseed)
 
