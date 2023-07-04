@@ -1,7 +1,11 @@
 # docker-compose exec app python3 test.py -d -g 1 -a base base human -e butterfly 
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+from typing import Type
+
+from app.environments.Environment import Environment
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import tensorflow as tf
 tf.get_logger().setLevel('INFO')
@@ -30,7 +34,7 @@ def main(args):
     Config.logger.set_level(Config.INFO)
 
   #make environment
-  env = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual, device = 'cuda')
+  env: Environment = get_environment(args.env_name)(verbose = args.verbose, manual = args.manual, device = 'cuda')
   env.seed(args.seed)
   set_random_seed(args.seed)
 

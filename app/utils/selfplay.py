@@ -1,7 +1,10 @@
 import os
+from typing import Type, Any
+
 import numpy as np
 import random
 
+from app.environments.Environment import Environment
 from app.utils.files import load_model, load_all_models, get_best_model_name
 from app.utils.agents import Agent
 
@@ -9,11 +12,12 @@ import app.config as Config
 
 from stable_baselines3.common import logger
 
-def selfplay_wrapper(env):
+def selfplay_wrapper(env: Type[Environment]):
+
     class SelfPlayEnv(env):
         # wrapper over the normal single player env, but loads the best self play model
-        def __init__(self, opponent_type, verbose):
-            super(SelfPlayEnv, self).__init__(verbose)
+        def __init__(self, opponent_type, verbose, device):
+            super(SelfPlayEnv, self).__init__(verbose, device)
             self.opponent_type = opponent_type
             self.opponent_models = load_all_models(self)
             self.best_model_name = get_best_model_name(self.name)
@@ -48,9 +52,10 @@ def selfplay_wrapper(env):
                         self.opponent_agent = Agent('ppo_opponent', self.opponent_models[i])  
 
                 elif self.opponent_type == 'base':
-                    self.opponent_agent = Agent('base', self.opponent_models[0])  
+                    self.opponent_agent = Agent('base', self.opponent_models[0])
 
-            self.agent_player_num = np.random.choice(self.n_players)
+            rng = np.random.default_rng()
+            self.agent_player_num: int = rng.choice(self.n_players)
             self.agents = [self.opponent_agent] * self.n_players
             self.agents[self.agent_player_num] = None
             try:
@@ -109,6 +114,29 @@ def selfplay_wrapper(env):
             if done:
                 self.render()
 
-            return observation, agent_reward, done, {} 
+            return observation, agent_reward, done, {}
+
+        def render(self, mode: str = "human") -> Any:
+            return super().render
+
+        @property
+        def observation(self):
+            return super().observation
+
+        @property
+        def name(self):
+            return super().name
+
+        @property
+        def current_player_num(self) -> int:
+            return super().current_player_num
+
+        @property
+        def n_players(self) -> int:
+            return super().n_players
+
+        @property
+        def players(self) -> []:
+            return super().players
 
     return SelfPlayEnv

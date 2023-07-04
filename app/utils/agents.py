@@ -7,6 +7,8 @@ from stable_baselines3.common.distributions import Distribution
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.utils import obs_as_tensor
 
+from app.environments.Environment import Environment
+
 np.set_printoptions(threshold=sys.maxsize)
 import random
 import string
@@ -45,7 +47,7 @@ class Agent():
     for i, a in zip(top5_action_idx, top5_action_values):
         Config.logger.debug(f"Top 5 actions: {i.item()} ': ' {a.item():.2f}")
 
-  def choose_action(self, env: gym.Env, choose_best_action, mask_invalid_actions):
+  def choose_action(self, env: Environment, choose_best_action, mask_invalid_actions):
       if self.name == 'rules':
         probs = torch.from_numpy(env.rules_move()).to(env.device)
         value = None

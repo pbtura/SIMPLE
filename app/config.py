@@ -10,4 +10,5 @@ LOGDIR = "logs"
 RESULTSPATH = 'viz/results.csv'
 TMPMODELDIR = "zoo/tmp"
 MODELDIR = "zoo"
+DEVICE ='cuda'
 logger: logger.Logger

@@ -1,31 +1,33 @@
 
 import gym
 import numpy as np
-import torch
-from torch import Tensor
 
 import app.config as Config
-
-from stable_baselines3.common import logger as lg
+from app.environments.Environment import Environment
 
 from .classes import *
 
 
-class SushiGoEnv(gym.Env):
+class SushiGoEnv(Environment):
     metadata = {'render.modes': ['human']}
-    def __init__(self, verbose = False, manual = False, device = 'cpu'):
+
+    def __init__(self, verbose = False, manual = False, device='cpu'):
         super(SushiGoEnv, self).__init__()
-        self.name = 'sushigo'
+        self._current_player_num = 0
+        self._name = 'sushigo'
         self.manual = manual
+        self.verbose = verbose
         self.device = device
-        
-        self.n_players = 3
+        self.max_score = 100
+        self._players = []
         self.cards_per_player = 9
         self.card_types = 12
+
+        self._n_players = 3
+        self.turns_taken = 0
         
         self.n_rounds = 3
-        self.max_score = 100
-        
+
         self.total_positions = self.n_players * 2 + 2
 
         self.contents = [
@@ -47,9 +49,7 @@ class SushiGoEnv(gym.Env):
 
         self.action_space = gym.spaces.Discrete(self.card_types + self.card_types * self.card_types)
         self.observation_space = gym.spaces.Box(0, 1, (self.total_cards * self.total_positions + self.n_players + self.action_space.n ,))
-        self.verbose = verbose
 
-        
     @property
     def observation(self):
         obs = np.zeros(([self.total_positions, self.total_cards]))
@@ -62,7 +62,7 @@ class SushiGoEnv(gym.Env):
             if self.turns_taken >= hands_seen:
                 for card in player.hand.cards:
                     obs[i*2][card.id] = 1
-                
+
             for card in player.position.cards:
                 obs[i*2+1][card.id] = 1
 
@@ -75,7 +75,7 @@ class SushiGoEnv(gym.Env):
 
         for card in self.discard.cards:
             obs[7][card.id] = 1
-        
+
         ret = obs.flatten()
         for p in self.players: # TODO this should be from reference point of the current_player
             ret = np.append(ret, p.score / self.max_score)
@@ -95,13 +95,8 @@ class SushiGoEnv(gym.Env):
                 for j in range(i+1, len(hand)):
                     legal_actions[self.card_types + (hand[i].order * self.card_types) + hand[j].order] = 1
                     legal_actions[self.card_types + (hand[j].order * self.card_types) + hand[i].order] = 1
-        
-        
+
         return legal_actions
-
-
-
-
 
     def score_game(self):
         reward = [0.0] * self.n_players
@@ -207,7 +202,6 @@ class SushiGoEnv(gym.Env):
         
         self.score_maki(maki)
 
-
     @property
     def current_player(self):
         return self.players[self.current_player_num]
@@ -257,7 +251,6 @@ class SushiGoEnv(gym.Env):
 
         self.players[0].hand = playernhand
 
-
     def step(self, action):
         
         reward = [0] * self.n_players
@@ -288,7 +281,7 @@ class SushiGoEnv(gym.Env):
                 self.action_bank = []
                 self.switch_hands()
             
-            self.current_player_num = (self.current_player_num + 1) % self.n_players
+            self._current_player_num = (self.current_player_num + 1) % self.n_players
 
             if self.current_player_num == 0:
                 self.turns_taken += 1
@@ -325,7 +318,7 @@ class SushiGoEnv(gym.Env):
         self.round = 0
         self.deck = Deck(self.contents)
         self.discard = Discard()
-        self.players = []
+        self._players = []
         self.action_bank = []
 
         player_id = 1
@@ -333,17 +326,13 @@ class SushiGoEnv(gym.Env):
             self.players.append(Player(str(player_id)))
             player_id += 1
 
-        self.current_player_num = 0
+        self._current_player_num = 0
         self.done = False
         self.reset_round()
         Config.logger.debug(f'\n\n---- NEW GAME ----')
         return self.observation
 
-
-    def render(self, mode='human', close=False):
-        
-        if close:
-            return
+    def render(self, mode='human'):
 
         if self.turns_taken < self.cards_per_player:
             Config.logger.debug(f'\n\n-------ROUND {self.round} : TURN {self.turns_taken + 1}-----------')
@@ -385,3 +374,20 @@ class SushiGoEnv(gym.Env):
 
     def rules_move(self):
         raise Exception('Rules based agent is not yet implemented for Sushi Go!')
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def n_players(self) -> int:
+        return self._n_players
+
+    @property
+    def players(self) -> []:
+        return self._players
+
+    @property
+    def current_player_num(self) -> int:
+        return self._current_player_num
+

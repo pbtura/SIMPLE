@@ -1,7 +1,11 @@
 # docker-compose exec app python3 train.py -r -e butterfly
 
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+from typing import Type
+
+from app.environments.Environment import Environment
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import tensorflow as tf
 tf.get_logger().setLevel('INFO')
@@ -57,8 +61,8 @@ def main(args):
   set_random_seed(workerseed)
 
   Config.logger.info('\nSetting up the selfplay training environment opponents...')
-  base_env = get_environment(args.env_name)(device = 'cuda')
-  env = selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose)
+  base_env: Type[Environment] = get_environment(args.env_name)
+  env = selfplay_wrapper(base_env)(opponent_type=args.opponent_type, verbose=args.verbose, device='cuda')
   env.seed(workerseed)
 
   
@@ -90,7 +94,7 @@ def main(args):
   #Callbacks
   Config.logger.info('\nSetting up the selfplay evaluation environment opponents...')
   callback_args = {
-    'eval_env': selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose),
+    'eval_env': selfplay_wrapper(base_env)(opponent_type = args.opponent_type, verbose = args.verbose, device = Config.DEVICE),
     'best_model_save_path' : Config.TMPMODELDIR,
     'log_path' : Config.LOGDIR,
     'eval_freq' : args.eval_freq,
